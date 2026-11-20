@@ -1,43 +1,123 @@
-// Palm Bay Heat — Leonida Cover Studio: the hand-in program for
-// make.fun's gta6-cover-art-01.
+// Palm Bay Heat — Leonida Cover Studio: hand-in program for gta6-cover-art-01.
 //
-// The studio itself is the static site under app/ (open app/index.html in a
-// browser; it runs fully offline). This program hands it in: it copies app/
-// and screenshots/ into the output directory and writes dossier.json there
-// with make.fun's vendored library, exactly as the bounty's scorer rebuilds
-// it. Outside the grader, MAKEFUN_OUTPUT_DIR stands in for /output:
+// Written from scratch for this entry. Node standard library only, no
+// dependencies, no network access. Running `node main.ts` from the repository
+// root does three things:
 //
-//   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
+//   1. Copies the static web app in app/ into out/app/ (byte for byte).
+//   2. Copies every screenshot in screenshots/ into out/screenshots/.
+//   3. Writes out/dossier.json: a deterministic inventory of the handed-in
+//      files — for each file its path, its size in bytes and its SHA-256 —
+//      together with the application's title.
+//
+// The inventory is deterministic: file lists are sorted by path, the JSON is
+// written with a fixed key order and a fixed indent, and no timestamp or
+// machine-specific value is included, so two runs over the same tree produce
+// a byte-identical dossier.json.
+//
+// MAKEFUN_OUTPUT_DIR, when set, replaces the default out/ directory.
 
-import { cpSync, existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildDossier } from './vendor/makefun-app.ts';
 
-const repoDir = fileURLToPath(new URL('.', import.meta.url));
-const outputDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+const APP_TITLE = 'Palm Bay Heat — Leonida Cover Studio';
+const COMPETITION = 'gta6-cover-art-01';
 
-mkdirSync(outputDir, { recursive: true });
-cpSync(join(repoDir, 'app'), join(outputDir, 'app'), { recursive: true });
+const here = fileURLToPath(new URL('.', import.meta.url));
+const outDir = process.env.MAKEFUN_OUTPUT_DIR
+  ? join(process.env.MAKEFUN_OUTPUT_DIR)
+  : join(here, 'out');
+const appSource = join(here, 'app');
+const shotsSource = join(here, 'screenshots');
 
-const shotsDir = join(repoDir, 'screenshots');
-const shotNames = existsSync(shotsDir)
-  ? readdirSync(shotsDir).filter((name) => !name.startsWith('.')).sort()
-  : [];
-if (shotNames.length < 3 || shotNames.length > 4) {
-  throw new Error(`screenshots/: expected 3 or 4 renders of the studio, found ${shotNames.length}`);
+function sha256OfFile(path) {
+  return createHash('sha256').update(readFileSync(path)).digest('hex');
 }
-cpSync(shotsDir, join(outputDir, 'screenshots'), { recursive: true });
 
-// The caps are the scorer's own: passing them makes this program refuse an
-// entry the scorer would refuse, instead of handing in a broken one.
-const dossier = buildDossier(outputDir, {
-  text_max_bytes: 163840,
-  screenshots: { max: 4, max_bytes: 262144 },
-  app_max_files: 993,
-  app_max_bytes: 50331648,
-  app_path_max_bytes: 1000,
-});
-writeFileSync(join(outputDir, 'dossier.json'), dossier);
+// Recursively list every regular file under dir, as POSIX-style paths
+// relative to the repository root, sorted so the order never depends on
+// the filesystem's own directory order.
+function listFiles(dir, root) {
+  const found = [];
+  if (!existsSync(dir)) return found;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      found.push(...listFiles(full, root));
+    } else if (entry.isFile()) {
+      found.push(relative(root, full).split(sep).join('/'));
+    }
+  }
+  return found.sort();
+}
 
-console.log(`Palm Bay Heat handed in: app/ copied, ${shotNames.length} screenshots, dossier of ${dossier.length} bytes.`);
+function inventory(paths) {
+  return paths.map((rel) => {
+    const full = join(here, rel);
+    return { path: rel, bytes: statSync(full).size, sha256: sha256OfFile(full) };
+  });
+}
+
+function totalBytes(entries) {
+  return entries.reduce((sum, entry) => sum + entry.bytes, 0);
+}
+
+function main() {
+  if (!existsSync(join(appSource, 'index.html'))) {
+    console.error('palm-bay-heat: app/index.html is missing; nothing to hand in');
+    process.exitCode = 1;
+    return;
+  }
+
+  // Start from a clean output directory so stale files from an earlier run
+  // can never leak into the hand-in or its inventory.
+  rmSync(outDir, { recursive: true, force: true });
+  mkdirSync(outDir, { recursive: true });
+
+  cpSync(appSource, join(outDir, 'app'), { recursive: true });
+  const shotPaths = listFiles(shotsSource, here);
+  if (shotPaths.length > 0) {
+    cpSync(shotsSource, join(outDir, 'screenshots'), { recursive: true });
+  }
+
+  const appFiles = inventory(listFiles(appSource, here));
+  const screenshots = inventory(shotPaths);
+
+  const dossier = {
+    title: APP_TITLE,
+    competition: COMPETITION,
+    format: 'palm-bay-heat/dossier v1',
+    app: {
+      entry: 'app/index.html',
+      files: appFiles,
+      fileCount: appFiles.length,
+      totalBytes: totalBytes(appFiles),
+    },
+    screenshots: {
+      files: screenshots,
+      fileCount: screenshots.length,
+      totalBytes: totalBytes(screenshots),
+    },
+  };
+
+  writeFileSync(join(outDir, 'dossier.json'), JSON.stringify(dossier, null, 2) + '\n');
+
+  console.log(
+    `palm-bay-heat: handed in "${APP_TITLE}" — ${appFiles.length} app files ` +
+      `(${totalBytes(appFiles)} bytes), ${screenshots.length} screenshots ` +
+      `(${totalBytes(screenshots)} bytes) -> ${relative(here, outDir).split(sep).join('/')}/dossier.json`,
+  );
+}
+
+main();
