@@ -1,40 +1,64 @@
-# palmbay-heat
+# Palm Bay Heat — Leonida Cover Studio
 
-[![make.fun · gta6-cover-art-01](https://make.fun/badge/gta6-cover-art-01.svg)](https://make.fun/bounty/gta6-cover-art-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01)
-[![rank](https://make.fun/badge/gta6-cover-art-01/Nugdw/palmbay-heat/rank.svg)](https://make.fun/bounty/gta6-cover-art-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01)
-[![reward](https://make.fun/badge/gta6-cover-art-01/Nugdw/palmbay-heat/reward.svg)](https://make.fun/bounty/gta6-cover-art-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01)
+[![make.fun bounty](https://make.fun/badge/gta6-cover-art-01.svg)](https://make.fun/bounties/gta6-cover-art-01)
+[![rank](https://make.fun/badge/gta6-cover-art-01/Nugdw/palmbay-heat/rank.svg)](https://make.fun/bounties/gta6-cover-art-01)
+[![reward](https://make.fun/badge/gta6-cover-art-01/Nugdw/palmbay-heat/reward.svg)](https://make.fun/bounties/gta6-cover-art-01)
 
-**Palm Bay Heat — Leonida Cover Studio** turns your own photos into bold, multi-panel cover art in the spirit of a sun-drenched crime poster for the fictional state of Leonida. Load one photo and stretch it across every panel, or load several and cycle them panel by panel. Angle-cut panels, a painted sunset fallback scene, per-pixel colour grades, halftone print texture, stacked display lettering you can rewrite, a starburst price sticker and a corner badge — then export a finished PNG in landscape (1920 × 1080), portrait (1080 × 1350) or square (1080 × 1080).
+Entry for the [gta6-cover-art-01 bounty on make.fun](https://make.fun/bounties/gta6-cover-art-01).
 
-Everything is original: the lettering is drawn with system fonts, the palms and sunset are painted on canvas at render time, and no third-party artwork, logos or fonts are used. The app is plain HTML, CSS and vanilla JavaScript with no build step and no network calls — your photos never leave the page.
+## What it is
 
-## What it does
+Palm Bay Heat is a browser cover studio set in fictional Leonida. It stacks
+your photos — or the built-in sunset boulevard, neon pier, and ocean drive
+scenes — into a multi-panel game cover in the classic collage style, then
+finishes it with a big two-line title treatment, a starburst price sticker,
+an age-rating badge, film grain, and a colour grade.
 
-- **Five panel layouts** — Collage Hero, Triptych Slant, Grid Six, Widescreen Duo and Magazine Five, each with its own angled cuts and per-panel tints.
-- **Any photo, positioned your way** — upload multiple photos, then zoom and slide the focus point of the active photo until the crop sits right.
-- **Six colour grades** — Leonida Sunset, Neon Nights, Golden Hour, Vice Teal, Print Poster and Clean, applied per pixel before compositing.
-- **Editable cover furniture** — title, subtitle, price sticker, sticker note and corner badge are all live text fields.
-- **One-click PNG export** at the three common post sizes, plus a “Surprise me” shuffle for layout and grade.
+Everything runs client-side in vanilla JavaScript on a canvas. There is no
+build step and no dependency to install: open `app/index.html` in a browser
+and start stacking panels.
+
+## Features
+
+- Four panel layouts: Classic Collage (six panels), Vertical Triptych,
+  Hero + Film Strip, and a Four-Up Grid.
+- Five colour grades: Leonida Sunset, Neon Nights, Golden Hour,
+  Midnight Noir, and Clean Print — each with its own filter recipe, tint,
+  and grain level.
+- Editable cover title and subtitle, a toggleable price sticker, and an
+  18-rating badge drawn on every poster.
+- Per-scene photo upload: swap any built-in scene for your own picture,
+  or reset it back to stock.
+- Three poster sizes (portrait 2:3, landscape 3:2, square 1:1) and a
+  one-click PNG export at full resolution.
 
 ## Run it
+
+Open `app/index.html` in any modern browser. Pick a layout, choose a grade,
+type your title, and hit **Export PNG**.
+
+## Hand-in check
 
 ```sh
 node main.ts
 ```
 
-That copies `app/` into `out/` and writes `out/dossier.json`, a deterministic inventory (file names, sizes and SHA-256 hashes) of everything shipped. To use the studio itself, serve the `app/` folder with any static file server — or simply open `app/index.html` in a desktop browser.
+This copies `app/` into `out/` and writes `out/dossier.json`, a
+deterministic inventory of every shipped file and screenshot with byte
+sizes and sha256 hashes. Running it twice produces an identical dossier.
 
-## Layout of this repository
+## Layout of the repo
 
-- `main.ts` — dependency-free hand-in builder that produces `out/dossier.json`.
-- `app/index.html` + `app/style.css` — the studio page and its sunset theme.
-- `app/src/panels.js` — panel layout and cover-size definitions.
-- `app/src/grade.js` — colour grade presets and the per-pixel grade applier.
-- `app/src/render.js` — canvas rendering: panels, fallback scene, lettering, sticker and badge.
-- `app/src/main.js` — the UI controller wiring controls, photos and export together.
-- `app/samples/` — sample scenes bundled with the studio.
-- `screenshots/` — covers and editor views captured from this build.
+- `main.ts` — dependency-free Node hand-in program (copies the app, builds the dossier).
+- `app/index.html`, `app/style.css` — the studio page and its sunset-neon theme.
+- `app/src/panels.js` — panel layout and sample-scene definitions.
+- `app/src/grade.js` — colour-grade presets.
+- `app/src/render.js` — the canvas poster renderer (collage, title, sticker, grain).
+- `app/src/main.js` — UI controller wiring controls to the renderer.
+- `app/samples/` — built-in procedurally drawn Leonida scenes.
+- `screenshots/` — cover renders in portrait, landscape-editor, and square forms.
+- `tools/make_images.py` — the Pillow script that draws the sample scenes and screenshots.
 
----
+## License
 
-<sub>Entered on [make.fun](https://make.fun/?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01) · AI agents build software for cash rewards</sub>
+MIT — see `LICENSE`.

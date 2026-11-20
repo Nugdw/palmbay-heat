@@ -4,125 +4,60 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Palm Bay Heat — Leonida Cover Studio</title>
-<meta name="description" content="Turn your photos into bold multi-panel GTA-style cover art for the fictional state of Leonida. Original artwork, offline, export as PNG.">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="masthead">
-  <div class="masthead-inner">
-    <p class="kicker">Leonida Cover Studio</p>
-    <h1>Palm Bay <span>Heat</span></h1>
-    <p class="tagline">Drop in a photo, pick a panel layout, grade it like a sunset over the bay — and export a cover worth posting.</p>
-  </div>
+  <h1>Palm Bay Heat</h1>
+  <p class="tagline">Leonida Cover Studio — build your own multi-panel game cover</p>
 </header>
-
 <main class="studio">
-  <section class="preview-column" aria-label="Cover preview">
-    <div class="canvas-frame">
-      <canvas id="coverCanvas" width="1920" height="1080"></canvas>
-    </div>
-    <p id="statusLine" class="status-line">Loading the studio…</p>
-    <div class="preview-actions">
-      <button id="exportButton" type="button" class="primary-action">Export PNG</button>
-      <button id="randomButton" type="button" class="ghost-action">Surprise me</button>
-    </div>
-    <div class="size-note">
-      <h2>Post sizes included</h2>
-      <ul>
-        <li><strong>Landscape</strong> 1920 × 1080 — feeds and video thumbnails</li>
-        <li><strong>Portrait</strong> 1080 × 1350 — the tall poster crop</li>
-        <li><strong>Square</strong> 1080 × 1080 — the classic grid post</li>
-      </ul>
-    </div>
+  <section class="stage" aria-label="Cover preview">
+    <canvas id="poster" width="1000" height="1500"></canvas>
+    <p id="status" class="status">Loading scenes…</p>
   </section>
-
-  <aside class="controls-column" aria-label="Cover controls">
-    <fieldset>
-      <legend>1 · Your photos</legend>
-      <label class="upload-box">
-        <span>Choose photos from your device</span>
-        <input id="photoInput" type="file" accept="image/*" multiple>
+  <aside class="controls" aria-label="Cover controls">
+    <div class="group">
+      <label for="layout-select">Panel layout</label>
+      <select id="layout-select"></select>
+      <button id="shuffle-btn" type="button">Next layout</button>
+    </div>
+    <div class="group">
+      <label for="grade-select">Colour grade</label>
+      <select id="grade-select"></select>
+    </div>
+    <div class="group">
+      <label for="size-select">Poster size</label>
+      <select id="size-select"></select>
+    </div>
+    <div class="group">
+      <label for="title-input">Cover title (one line per row)</label>
+      <textarea id="title-input" rows="2"></textarea>
+      <label for="subtitle-input">Subtitle</label>
+      <input id="subtitle-input" type="text">
+    </div>
+    <div class="group">
+      <label for="price-input">Price sticker</label>
+      <input id="price-input" type="text">
+      <label class="check">
+        <input id="sticker-toggle" type="checkbox"> Show price sticker
       </label>
-      <div id="sampleButtons" class="sample-buttons">
-        <span class="sample-label">Or start with a sample scene:</span>
-        <button type="button" data-sample="samples/hero.jpg" data-label="Sample — Hero">Hero</button>
-        <button type="button" data-sample="samples/boulevard.jpg" data-label="Sample — Boulevard">Boulevard</button>
-        <button type="button" data-sample="samples/pier.jpg" data-label="Sample — Pier">Pier</button>
-      </div>
-      <div id="photoList" class="photo-list"></div>
-      <label>Fill panels
-        <select id="fillModeSelect">
-          <option value="single" selected>One photo across every panel</option>
-          <option value="per-panel">Cycle photos panel by panel</option>
-        </select>
-      </label>
-      <label>Zoom active photo
-        <input id="zoomRange" type="range" min="1" max="2.6" step="0.02" value="1">
-      </label>
-      <label>Focus left ↔ right
-        <input id="focusXRange" type="range" min="0" max="1" step="0.01" value="0.5">
-      </label>
-      <label>Focus top ↔ bottom
-        <input id="focusYRange" type="range" min="0" max="1" step="0.01" value="0.5">
-      </label>
-    </fieldset>
-
-    <fieldset>
-      <legend>2 · Layout &amp; grade</legend>
-      <label>Panel layout
-        <select id="layoutSelect"></select>
-      </label>
-      <label>Cover size
-        <select id="sizeSelect"></select>
-      </label>
-      <label>Colour grade
-        <select id="gradeSelect"></select>
-      </label>
-      <p id="gradeBlurb" class="grade-blurb"></p>
-      <label class="check-row">
-        <input id="halftoneToggle" type="checkbox" checked>
-        Halftone print texture
-      </label>
-    </fieldset>
-
-    <fieldset>
-      <legend>3 · Lettering &amp; stickers</legend>
-      <label>Cover title
-        <input id="titleInput" type="text" value="PALM BAY HEAT" maxlength="42">
-      </label>
-      <label>Subtitle
-        <input id="subtitleInput" type="text" value="LEONIDA" maxlength="30">
-      </label>
-      <label class="check-row">
-        <input id="stickerToggle" type="checkbox" checked>
-        Price sticker
-      </label>
-      <label>Sticker price
-        <input id="stickerPriceInput" type="text" value="$69" maxlength="8">
-      </label>
-      <label>Sticker note
-        <input id="stickerNoteInput" type="text" value="OUT NOW" maxlength="14">
-      </label>
-      <label class="check-row">
-        <input id="badgeToggle" type="checkbox" checked>
-        Corner badge
-      </label>
-      <label>Badge text
-        <input id="badgeTextInput" type="text" value="18+ · LEONIDA" maxlength="24">
-      </label>
-    </fieldset>
-
-    <p class="fine-print">Everything runs locally in your browser. Your photos never leave this page. All lettering, stickers and scenes are original to Palm Bay Heat.</p>
+    </div>
+    <div class="group">
+      <h2>Your photos</h2>
+      <p class="hint">Replace any built-in Leonida scene with your own photo,
+        or reset it back to the stock scene.</p>
+      <div id="panel-uploads"></div>
+    </div>
+    <div class="group">
+      <button id="export-btn" type="button" class="export">Export PNG</button>
+    </div>
   </aside>
 </main>
-
-<footer class="colophon">
-  <p>Palm Bay Heat — Leonida Cover Studio · A fictional cover maker for the make.fun GTA 6 cover art bounty.</p>
+<footer class="foot">
+  <p>A fan-made cover studio set in fictional Leonida. Vanilla JS, no build
+    step — open this page and start stacking panels.</p>
 </footer>
-
-<script src="src/panels.js"></script>
-<script src="src/grade.js"></script>
-<script src="src/render.js"></script>
-<script src="src/main.js"></script>
+<script type="module" src="src/main.js"></script>
 </body>
 </html>

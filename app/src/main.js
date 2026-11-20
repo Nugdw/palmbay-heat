@@ -1,241 +1,159 @@
 // main.js — UI controller for Palm Bay Heat — Leonida Cover Studio.
-// Wires the controls to the render pipeline, manages photo state,
-// sample scenes, per-panel assignment and PNG export. No build step.
-"use strict";
+// Wires the control panel to the renderer: layout picker, colour grade,
+// editable title/subtitle, price sticker, per-panel photo upload, poster
+// size presets, and PNG export. Vanilla JS, no build step.
 
-const { PANEL_LAYOUTS, COVER_SIZES } = window.PalmBayPanels;
-const { GRADE_PRESETS } = window.PalmBayGrade;
-const { renderCover, exportCoverPng } = window.PalmBayRender;
+import { LAYOUTS, SAMPLES, layoutById, sampleById } from "./panels.js";
+import { GRADES, gradeById } from "./grade.js";
+import { renderPoster } from "./render.js";
+
+const canvas = document.getElementById("poster");
+const ctx = canvas.getContext("2d");
 
 const state = {
-  title: "PALM BAY HEAT",
-  subtitle: "LEONIDA",
-  layoutId: "collage-hero",
-  sizeId: "landscape",
-  gradeId: "leonida-sunset",
-  fillMode: "single",
-  halftone: true,
+  layoutId: "classic",
+  gradeId: "sunset",
+  title: "PALM BAY\nHEAT",
+  subtitle: "Welcome back to Leonida",
+  price: "$69",
+  tagline: "OUT NOW",
   showSticker: true,
-  stickerPrice: "$69",
-  stickerNote: "OUT NOW",
-  showBadge: true,
-  badgeText: "18+ · LEONIDA",
-  photos: [], // { name, image, zoom, focusX, focusY }
-  activePhotoIndex: 0,
+  sizeId: "portrait",
+  images: new Map(), // sampleId -> HTMLImageElement | null
 };
 
-const els = {};
-function grabElements() {
-  const ids = [
-    "coverCanvas", "titleInput", "subtitleInput", "layoutSelect", "sizeSelect",
-    "gradeSelect", "fillModeSelect", "halftoneToggle", "stickerToggle",
-    "stickerPriceInput", "stickerNoteInput", "badgeToggle", "badgeTextInput",
-    "photoInput", "sampleButtons", "photoList", "zoomRange", "focusXRange",
-    "focusYRange", "exportButton", "randomButton", "statusLine", "gradeBlurb",
-  ];
-  for (const id of ids) els[id] = document.getElementById(id);
-}
+const SIZES = {
+  portrait: { label: "Portrait 2:3", w: 1000, h: 1500 },
+  landscape: { label: "Landscape 3:2", w: 1500, h: 1000 },
+  square: { label: "Square 1:1", w: 1200, h: 1200 },
+};
 
-let renderQueued = false;
-function scheduleRender() {
-  if (renderQueued) return;
-  renderQueued = true;
-  requestAnimationFrame(() => {
-    renderQueued = false;
-    renderCover(els.coverCanvas, state);
-    updateStatusLine();
+function loadImage(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
   });
 }
 
-function updateStatusLine() {
-  const size = COVER_SIZES.find((s) => s.id === state.sizeId);
-  const layout = PANEL_LAYOUTS.find((l) => l.id === state.layoutId);
-  const photoText = state.photos.length === 0
-    ? "built-in sunset scene"
-    : `${state.photos.length} photo${state.photos.length > 1 ? "s" : ""} loaded`;
-  els.statusLine.textContent =
-    `${layout.name} · ${size.width} × ${size.height} · ${photoText} · ready to export`;
+function redraw() {
+  const size = SIZES[state.sizeId];
+  canvas.width = size.w;
+  canvas.height = size.h;
+  renderPoster(ctx, size.w, size.h, {
+    layout: layoutById(state.layoutId),
+    images: state.images,
+    grade: gradeById(state.gradeId),
+    title: state.title,
+    subtitle: state.subtitle,
+    price: state.price,
+    tagline: state.tagline,
+    showSticker: state.showSticker,
+  });
+  const status = document.getElementById("status");
+  if (status) {
+    status.textContent =
+      `${layoutById(state.layoutId).label} · ${gradeById(state.gradeId).label} · ` +
+      `${size.w}×${size.h}px`;
+  }
 }
 
-function fillSelect(select, items, current) {
-  select.innerHTML = "";
+function fillSelect(id, items, value) {
+  const el = document.getElementById(id);
+  el.innerHTML = "";
   for (const item of items) {
-    const option = document.createElement("option");
-    option.value = item.id;
-    option.textContent = item.name;
-    if (item.id === current) option.selected = true;
-    select.appendChild(option);
+    const opt = document.createElement("option");
+    opt.value = item.id;
+    opt.textContent = item.label;
+    if (item.id === value) opt.selected = true;
+    el.appendChild(opt);
   }
+  return el;
 }
 
-function loadPhotoFile(file) {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const image = new Image();
-    image.onload = () => resolve({ name: file.name, image, zoom: 1, focusX: 0.5, focusY: 0.5, objectUrl: url });
-    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error(`Could not load ${file.name}`)); };
-    image.src = url;
-  });
-}
-
-function loadSamplePhoto(path, label) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve({ name: label, image, zoom: 1, focusX: 0.5, focusY: 0.5 });
-    image.onerror = () => reject(new Error(`Sample ${label} failed to load`));
-    image.src = path;
-  });
-}
-
-function refreshPhotoList() {
-  els.photoList.innerHTML = "";
-  state.photos.forEach((photo, index) => {
-    const row = document.createElement("div");
-    row.className = "photo-row" + (index === state.activePhotoIndex ? " active" : "");
-    const label = document.createElement("button");
-    label.type = "button";
-    label.className = "photo-pick";
-    label.textContent = `${index + 1}. ${photo.name} — ${photo.image.width}×${photo.image.height}`;
-    label.addEventListener("click", () => {
-      state.activePhotoIndex = index;
-      syncPhotoSliders();
-      refreshPhotoList();
+function buildPanelUploads() {
+  const host = document.getElementById("panel-uploads");
+  host.innerHTML = "";
+  for (const sample of SAMPLES) {
+    const row = document.createElement("label");
+    row.className = "upload-row";
+    const span = document.createElement("span");
+    span.textContent = sample.label;
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.addEventListener("change", async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      state.images.set(sample.id, await loadImage(url));
+      redraw();
     });
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "photo-remove";
-    remove.textContent = "Remove";
-    remove.addEventListener("click", () => {
-      const [gone] = state.photos.splice(index, 1);
-      if (gone && gone.objectUrl) URL.revokeObjectURL(gone.objectUrl);
-      state.activePhotoIndex = Math.max(0, Math.min(state.activePhotoIndex, state.photos.length - 1));
-      syncPhotoSliders();
-      refreshPhotoList();
-      scheduleRender();
+    const reset = document.createElement("button");
+    reset.type = "button";
+    reset.textContent = "Reset";
+    reset.addEventListener("click", async (ev) => {
+      ev.preventDefault();
+      state.images.set(sample.id, await loadImage(sampleById(sample.id).src));
+      redraw();
     });
-    row.append(label, remove);
-    els.photoList.appendChild(row);
-  });
-  if (state.photos.length === 0) {
-    const empty = document.createElement("p");
-    empty.className = "photo-empty";
-    empty.textContent = "No photos yet — the cover uses the built-in Palm Bay sunset scene.";
-    els.photoList.appendChild(empty);
-  }
-}
-
-function activePhoto() {
-  return state.photos[state.activePhotoIndex] || null;
-}
-
-function syncPhotoSliders() {
-  const photo = activePhoto();
-  const disabled = !photo;
-  for (const slider of [els.zoomRange, els.focusXRange, els.focusYRange]) slider.disabled = disabled;
-  if (photo) {
-    els.zoomRange.value = String(photo.zoom);
-    els.focusXRange.value = String(photo.focusX);
-    els.focusYRange.value = String(photo.focusY);
+    row.append(span, input, reset);
+    host.appendChild(row);
   }
 }
 
 function bindControls() {
-  els.titleInput.addEventListener("input", () => { state.title = els.titleInput.value; scheduleRender(); });
-  els.subtitleInput.addEventListener("input", () => { state.subtitle = els.subtitleInput.value; scheduleRender(); });
-  els.layoutSelect.addEventListener("change", () => { state.layoutId = els.layoutSelect.value; scheduleRender(); });
-  els.sizeSelect.addEventListener("change", () => { state.sizeId = els.sizeSelect.value; scheduleRender(); });
-  els.gradeSelect.addEventListener("change", () => {
-    state.gradeId = els.gradeSelect.value;
-    const preset = GRADE_PRESETS.find((p) => p.id === state.gradeId);
-    els.gradeBlurb.textContent = preset ? preset.blurb : "";
-    scheduleRender();
-  });
-  els.fillModeSelect.addEventListener("change", () => { state.fillMode = els.fillModeSelect.value; scheduleRender(); });
-  els.halftoneToggle.addEventListener("change", () => { state.halftone = els.halftoneToggle.checked; scheduleRender(); });
-  els.stickerToggle.addEventListener("change", () => { state.showSticker = els.stickerToggle.checked; scheduleRender(); });
-  els.stickerPriceInput.addEventListener("input", () => { state.stickerPrice = els.stickerPriceInput.value; scheduleRender(); });
-  els.stickerNoteInput.addEventListener("input", () => { state.stickerNote = els.stickerNoteInput.value; scheduleRender(); });
-  els.badgeToggle.addEventListener("change", () => { state.showBadge = els.badgeToggle.checked; scheduleRender(); });
-  els.badgeTextInput.addEventListener("input", () => { state.badgeText = els.badgeTextInput.value; scheduleRender(); });
+  fillSelect("layout-select", LAYOUTS, state.layoutId)
+    .addEventListener("change", (e) => { state.layoutId = e.target.value; redraw(); });
+  fillSelect("grade-select", GRADES, state.gradeId)
+    .addEventListener("change", (e) => { state.gradeId = e.target.value; redraw(); });
+  fillSelect("size-select",
+    Object.entries(SIZES).map(([id, s]) => ({ id, label: s.label })), state.sizeId)
+    .addEventListener("change", (e) => { state.sizeId = e.target.value; redraw(); });
 
-  els.photoInput.addEventListener("change", async () => {
-    const files = Array.from(els.photoInput.files || []);
-    for (const file of files) {
-      try {
-        const photo = await loadPhotoFile(file);
-        state.photos.push(photo);
-      } catch (error) {
-        els.statusLine.textContent = error.message;
-      }
-    }
-    state.activePhotoIndex = Math.max(0, state.photos.length - 1);
-    els.photoInput.value = "";
-    syncPhotoSliders();
-    refreshPhotoList();
-    scheduleRender();
+  const titleInput = document.getElementById("title-input");
+  titleInput.value = state.title;
+  titleInput.addEventListener("input", () => { state.title = titleInput.value; redraw(); });
+
+  const subInput = document.getElementById("subtitle-input");
+  subInput.value = state.subtitle;
+  subInput.addEventListener("input", () => { state.subtitle = subInput.value; redraw(); });
+
+  const priceInput = document.getElementById("price-input");
+  priceInput.value = state.price;
+  priceInput.addEventListener("input", () => { state.price = priceInput.value; redraw(); });
+
+  const stickerToggle = document.getElementById("sticker-toggle");
+  stickerToggle.checked = state.showSticker;
+  stickerToggle.addEventListener("change", () => {
+    state.showSticker = stickerToggle.checked;
+    redraw();
   });
 
-  els.zoomRange.addEventListener("input", () => {
-    const photo = activePhoto(); if (!photo) return;
-    photo.zoom = Number(els.zoomRange.value); scheduleRender();
-  });
-  els.focusXRange.addEventListener("input", () => {
-    const photo = activePhoto(); if (!photo) return;
-    photo.focusX = Number(els.focusXRange.value); scheduleRender();
-  });
-  els.focusYRange.addEventListener("input", () => {
-    const photo = activePhoto(); if (!photo) return;
-    photo.focusY = Number(els.focusYRange.value); scheduleRender();
+  document.getElementById("shuffle-btn").addEventListener("click", () => {
+    const order = [...LAYOUTS];
+    const next = order[(order.findIndex((l) => l.id === state.layoutId) + 1) % order.length];
+    state.layoutId = next.id;
+    document.getElementById("layout-select").value = next.id;
+    redraw();
   });
 
-  els.sampleButtons.addEventListener("click", async (event) => {
-    const button = event.target.closest("[data-sample]");
-    if (!button) return;
-    button.disabled = true;
-    try {
-      const photo = await loadSamplePhoto(button.dataset.sample, button.dataset.label);
-      state.photos.push(photo);
-      state.activePhotoIndex = state.photos.length - 1;
-      syncPhotoSliders();
-      refreshPhotoList();
-      scheduleRender();
-    } catch (error) {
-      els.statusLine.textContent = error.message;
-    } finally {
-      button.disabled = false;
-    }
-  });
-
-  els.randomButton.addEventListener("click", () => {
-    const pick = (list) => list[Math.floor(Math.random() * list.length)];
-    state.layoutId = pick(PANEL_LAYOUTS).id;
-    state.gradeId = pick(GRADE_PRESETS).id;
-    els.layoutSelect.value = state.layoutId;
-    els.gradeSelect.value = state.gradeId;
-    const preset = GRADE_PRESETS.find((p) => p.id === state.gradeId);
-    els.gradeBlurb.textContent = preset ? preset.blurb : "";
-    scheduleRender();
-  });
-
-  els.exportButton.addEventListener("click", () => {
-    renderCover(els.coverCanvas, state);
-    const safeTitle = (state.title || "palm-bay-heat").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    exportCoverPng(els.coverCanvas, `${safeTitle}-${state.sizeId}.png`);
-    els.statusLine.textContent = `Exported ${safeTitle}-${state.sizeId}.png`;
+  document.getElementById("export-btn").addEventListener("click", () => {
+    const a = document.createElement("a");
+    a.download = "palm-bay-heat-cover.png";
+    a.href = canvas.toDataURL("image/png");
+    a.click();
   });
 }
 
-function initialiseStudio() {
-  grabElements();
-  fillSelect(els.layoutSelect, PANEL_LAYOUTS, state.layoutId);
-  fillSelect(els.sizeSelect, COVER_SIZES, state.sizeId);
-  fillSelect(els.gradeSelect, GRADE_PRESETS, state.gradeId);
-  const preset = GRADE_PRESETS.find((p) => p.id === state.gradeId);
-  els.gradeBlurb.textContent = preset ? preset.blurb : "";
+async function init() {
+  for (const sample of SAMPLES) {
+    state.images.set(sample.id, await loadImage(sample.src));
+  }
+  buildPanelUploads();
   bindControls();
-  syncPhotoSliders();
-  refreshPhotoList();
-  scheduleRender();
+  redraw();
 }
 
-document.addEventListener("DOMContentLoaded", initialiseStudio);
+init();
