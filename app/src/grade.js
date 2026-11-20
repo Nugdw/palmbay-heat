@@ -1,104 +1,105 @@
-// Palm Bay Heat — colour grade presets.
-//
-// A grade is data, not code: the canvas filter chain applied to every
-// photograph, the warm/cool overlay wash laid over the whole collage, how
-// much film grain and vignette the finish carries, and the ink colours the
-// title is lettered in. The renderer (render.js) interprets the data, so
-// adding a grade never means touching the drawing code.
-//
-// All names and looks are this studio's own — Leonida neon-sunset finishes
-// described in plain colour terms.
+// grade.js — colour grade presets for Palm Bay Heat.
+// A grade is applied per pixel on an offscreen copy of each panel photo,
+// then composited by render.js. Presets are plain data plus one applier.
+"use strict";
 
-(function () {
-  'use strict';
+const GRADE_PRESETS = [
+  {
+    id: "leonida-sunset",
+    name: "Leonida Sunset",
+    blurb: "Hot oranges, lifted shadows, teal pushed into the sky.",
+    warmth: 0.22, saturation: 1.28, contrast: 1.12, brightness: 1.03,
+    tealShadows: 0.16, fade: 0.05,
+  },
+  {
+    id: "neon-nights",
+    name: "Neon Nights",
+    blurb: "Magenta and cyan split, deep blacks, electric saturation.",
+    warmth: -0.06, saturation: 1.45, contrast: 1.22, brightness: 0.98,
+    tealShadows: 0.30, fade: 0.0,
+  },
+  {
+    id: "golden-hour",
+    name: "Golden Hour",
+    blurb: "Soft warm glow, gentle contrast, holiday-postcard skin.",
+    warmth: 0.34, saturation: 1.12, contrast: 0.96, brightness: 1.07,
+    tealShadows: 0.04, fade: 0.10,
+  },
+  {
+    id: "vice-teal",
+    name: "Vice Teal",
+    blurb: "Cool aqua wash with punchy highlights.",
+    warmth: -0.20, saturation: 1.18, contrast: 1.08, brightness: 1.02,
+    tealShadows: 0.38, fade: 0.03,
+  },
+  {
+    id: "print-poster",
+    name: "Print Poster",
+    blurb: "Flat, faded, slightly posterised — like a newsstand cover.",
+    warmth: 0.08, saturation: 0.92, contrast: 1.05, brightness: 1.05,
+    tealShadows: 0.08, fade: 0.22, posterise: 18,
+  },
+  {
+    id: "clean",
+    name: "Clean",
+    blurb: "No grade — the photo exactly as supplied.",
+    warmth: 0, saturation: 1, contrast: 1, brightness: 1,
+    tealShadows: 0, fade: 0,
+  },
+];
 
-  var PBH = (window.PBH = window.PBH || {});
+function getGradePreset(id) {
+  return GRADE_PRESETS.find((preset) => preset.id === id) || GRADE_PRESETS[0];
+}
 
-  PBH.GRADES = [
-    {
-      id: 'neon-sunset',
-      name: 'Neon Sunset',
-      blurb: 'The signature look: hot coral sky, teal shadows, everything glowing.',
-      filter: 'saturate(1.45) contrast(1.12) brightness(1.04) hue-rotate(-6deg)',
-      washTop: 'rgba(255, 94, 58, 0.20)',
-      washBottom: 'rgba(16, 92, 110, 0.26)',
-      grain: 0.5,
-      vignette: 0.42,
-      titleFill: ['#ffe259', '#ff7518'],
-      titleStroke: '#2b0a1e',
-      accent: '#19e3c2',
-    },
-    {
-      id: 'vice-dusk',
-      name: 'Vice Dusk',
-      blurb: 'Magenta and electric blue, half an hour after the sun goes down.',
-      filter: 'saturate(1.3) contrast(1.18) brightness(0.98) hue-rotate(12deg)',
-      washTop: 'rgba(214, 38, 150, 0.22)',
-      washBottom: 'rgba(24, 32, 120, 0.30)',
-      grain: 0.55,
-      vignette: 0.5,
-      titleFill: ['#ff9de2', '#7b2ff7'],
-      titleStroke: '#160a2b',
-      accent: '#37c6ff',
-    },
-    {
-      id: 'tropical-noon',
-      name: 'Tropical Noon',
-      blurb: 'Bleached-bright midday: hard light, pale sky, colours like a postcard.',
-      filter: 'saturate(1.15) contrast(1.02) brightness(1.16)',
-      washTop: 'rgba(255, 236, 170, 0.16)',
-      washBottom: 'rgba(64, 170, 160, 0.14)',
-      grain: 0.3,
-      vignette: 0.28,
-      titleFill: ['#ffffff', '#ffd23f'],
-      titleStroke: '#7a2d0c',
-      accent: '#ff5964',
-    },
-    {
-      id: 'midnight-run',
-      name: 'Midnight Run',
-      blurb: 'Deep blue night grade with sodium-lamp warmth kept in the highlights.',
-      filter: 'saturate(0.95) contrast(1.24) brightness(0.86) hue-rotate(-14deg)',
-      washTop: 'rgba(10, 16, 64, 0.34)',
-      washBottom: 'rgba(2, 4, 18, 0.42)',
-      grain: 0.7,
-      vignette: 0.62,
-      titleFill: ['#cfe8ff', '#4d7cff'],
-      titleStroke: '#04060f',
-      accent: '#ffb347',
-    },
-    {
-      id: 'golden-hour',
-      name: 'Golden Hour',
-      blurb: 'Amber everything: long shadows, honey light, calm before the job.',
-      filter: 'saturate(1.25) contrast(1.08) brightness(1.08) sepia(0.28)',
-      washTop: 'rgba(255, 170, 40, 0.22)',
-      washBottom: 'rgba(120, 52, 10, 0.24)',
-      grain: 0.45,
-      vignette: 0.45,
-      titleFill: ['#fff3b0', '#e09f3e'],
-      titleStroke: '#33150a',
-      accent: '#9e2b25',
-    },
-    {
-      id: 'mono-heat',
-      name: 'Mono Heat',
-      blurb: 'Near-black-and-white with a single red accent — the art-house cut.',
-      filter: 'saturate(0.25) contrast(1.3) brightness(1.02)',
-      washTop: 'rgba(30, 30, 34, 0.18)',
-      washBottom: 'rgba(0, 0, 0, 0.30)',
-      grain: 0.8,
-      vignette: 0.55,
-      titleFill: ['#ffffff', '#c9c9c9'],
-      titleStroke: '#0a0a0a',
-      accent: '#e5383b',
-    },
-  ];
+function clampByte(value) {
+  return value < 0 ? 0 : value > 255 ? 255 : value;
+}
 
-  PBH.getGrade = function (id) {
-    for (var i = 0; i < PBH.GRADES.length; i++) {
-      if (PBH.GRADES[i].id === id) return PBH.GRADES[i];
+// Apply a preset to ImageData in place and return it.
+function applyGradeToPixels(imageData, preset) {
+  const data = imageData.data;
+  const warmR = 1 + preset.warmth;
+  const warmB = 1 - preset.warmth;
+  const intercept = 128 * (1 - preset.contrast) + 255 * preset.fade * 0.5;
+  for (let i = 0; i < data.length; i += 4) {
+    let r = data[i], g = data[i + 1], b = data[i + 2];
+    // Brightness and contrast around the midpoint.
+    r = r * preset.brightness * preset.contrast + intercept;
+    g = g * preset.brightness * preset.contrast + intercept;
+    b = b * preset.brightness * preset.contrast + intercept;
+    // Saturation around luminance.
+    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    r = lum + (r - lum) * preset.saturation;
+    g = lum + (g - lum) * preset.saturation;
+    b = lum + (b - lum) * preset.saturation;
+    // Warmth split.
+    r *= warmR; b *= warmB;
+    // Teal into the shadows, fading out towards the highlights.
+    const shadowWeight = Math.max(0, 1 - lum / 255) * preset.tealShadows;
+    g += 42 * shadowWeight; b += 55 * shadowWeight; r -= 18 * shadowWeight;
+    // Optional posterise for the print look.
+    if (preset.posterise) {
+      const step = 255 / preset.posterise;
+      r = Math.round(r / step) * step;
+      g = Math.round(g / step) * step;
+      b = Math.round(b / step) * step;
     }
-    return PBH.GRADES[0];
-  };
-})();
+    // Fade lifts the black point.
+    const lift = preset.fade * 28;
+    data[i] = clampByte(r + lift);
+    data[i + 1] = clampByte(g + lift);
+    data[i + 2] = clampByte(b + lift);
+  }
+  return imageData;
+}
+
+// Small per-panel tint overlays used by the layouts in panels.js.
+const PANEL_TINTS = {
+  none: null,
+  warm: "rgba(255, 138, 61, 0.16)",
+  teal: "rgba(20, 184, 196, 0.16)",
+  magenta: "rgba(255, 62, 165, 0.15)",
+};
+
+window.PalmBayGrade = { GRADE_PRESETS, PANEL_TINTS, getGradePreset, applyGradeToPixels };

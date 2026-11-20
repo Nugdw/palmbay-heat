@@ -4,129 +4,120 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Palm Bay Heat — Leonida Cover Studio</title>
-<meta name="description" content="Turn your photos into a multi-panel GTA-style cover poster for the fictional city of Palm Bay, Leonida. Offline, in your browser, exported as a PNG.">
+<meta name="description" content="Turn your photos into bold multi-panel GTA-style cover art for the fictional state of Leonida. Original artwork, offline, export as PNG.">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="topbar">
-  <div class="brand">
-    <div class="brand-mark" aria-hidden="true">PB</div>
-    <div class="brand-words">
-      <h1>Palm Bay Heat</h1>
-      <p>Leonida Cover Studio — multi-panel cover art from your own photos</p>
-    </div>
+<header class="masthead">
+  <div class="masthead-inner">
+    <p class="kicker">Leonida Cover Studio</p>
+    <h1>Palm Bay <span>Heat</span></h1>
+    <p class="tagline">Drop in a photo, pick a panel layout, grade it like a sunset over the bay — and export a cover worth posting.</p>
   </div>
-  <button id="exportTop" class="btn btn-export" type="button">Export PNG</button>
 </header>
 
-<main class="workspace">
-  <aside class="controls" aria-label="Cover controls">
-
-    <section class="panel-block">
-      <h2>1 · Photos</h2>
-      <label class="dropzone" id="dropzone">
-        <input id="fileInput" type="file" accept="image/*" multiple hidden>
-        <span class="dropzone-big">Drop photos here or click to choose</span>
-        <span class="dropzone-small">Photos never leave this machine — everything renders locally.</span>
-      </label>
-      <div class="row wrap">
-        <button id="sampleHero" class="btn btn-ghost" type="button">Sample: Hero</button>
-        <button id="samplePier" class="btn btn-ghost" type="button">Sample: Pier</button>
-        <button id="sampleBoulevard" class="btn btn-ghost" type="button">Sample: Boulevard</button>
-        <button id="clearPhotos" class="btn btn-ghost" type="button">Built-in sunset scenes</button>
-      </div>
-      <p class="hint" id="photoCount">No photos loaded — panels use the built-in Leonida sunset scenes.</p>
-      <div class="photo-strip" id="photoStrip" aria-label="Loaded photos"></div>
-    </section>
-
-    <section class="panel-block">
-      <h2>2 · Panel layout</h2>
-      <div class="option-grid" id="layoutList" role="listbox" aria-label="Panel layouts"></div>
-      <p class="hint" id="layoutBlurb"></p>
-    </section>
-
-    <section class="panel-block">
-      <h2>3 · Colour grade</h2>
-      <div class="option-grid" id="gradeList" role="listbox" aria-label="Colour grades"></div>
-      <p class="hint" id="gradeBlurb"></p>
-    </section>
-
-    <section class="panel-block">
-      <h2>4 · Poster size</h2>
-      <div class="option-grid" id="formatList" role="listbox" aria-label="Poster sizes"></div>
-    </section>
-
-    <section class="panel-block">
-      <h2>5 · Lettering</h2>
-      <label class="field">
-        <span>Title (one or two lines)</span>
-        <textarea id="titleInput" rows="2" maxlength="42">PALM BAY
-HEAT</textarea>
-      </label>
-      <label class="field">
-        <span>Subtitle</span>
-        <input id="subtitleInput" type="text" maxlength="48" value="Welcome back to Leonida">
-      </label>
-      <label class="field">
-        <span>Bottom caption</span>
-        <input id="captionInput" type="text" maxlength="64" value="One city. Two lives. No brakes.">
-      </label>
-      <label class="field">
-        <span>Title size</span>
-        <input id="titleRange" type="range" min="0.7" max="1.35" step="0.01" value="1">
-      </label>
-    </section>
-
-    <section class="panel-block">
-      <h2>6 · Stickers &amp; badges</h2>
-      <label class="check">
-        <input id="priceOn" type="checkbox" checked>
-        <span>Price sticker</span>
-        <input id="priceText" class="mini" type="text" maxlength="10" value="$69.99">
-      </label>
-      <label class="check">
-        <input id="badgeOn" type="checkbox" checked>
-        <span>Rating badge</span>
-        <input id="badgeText" class="mini" type="text" maxlength="4" value="18+">
-      </label>
-    </section>
-
-    <section class="panel-block">
-      <h2>7 · Finish</h2>
-      <label class="field">
-        <span>Photo zoom</span>
-        <input id="zoomRange" type="range" min="1" max="1.8" step="0.01" value="1">
-      </label>
-      <label class="field">
-        <span>White gutter width</span>
-        <input id="gutterRange" type="range" min="0" max="26" step="1" value="10">
-      </label>
-      <div class="row wrap">
-        <button id="shuffleBtn" class="btn" type="button">Shuffle photos across panels</button>
-        <button id="surpriseBtn" class="btn" type="button">Surprise me</button>
-      </div>
-    </section>
-
-    <section class="panel-block">
-      <button id="exportBtn" class="btn btn-export btn-wide" type="button">Export cover as PNG</button>
-      <p class="hint" id="statusLine">Ready. The preview is exactly what exports.</p>
-    </section>
-  </aside>
-
-  <section class="stage" aria-label="Cover preview">
-    <div class="stage-frame">
-      <canvas id="coverCanvas" width="1080" height="1620"></canvas>
+<main class="studio">
+  <section class="preview-column" aria-label="Cover preview">
+    <div class="canvas-frame">
+      <canvas id="coverCanvas" width="1920" height="1080"></canvas>
     </div>
-    <p class="stage-note">
-      Palm Bay and Leonida are fictional places invented for this studio. The cover style —
-      a collage of framed moments under one big title — is drawn entirely by this app's own
-      canvas code, with your photos or its built-in sunset scenes.
-    </p>
+    <p id="statusLine" class="status-line">Loading the studio…</p>
+    <div class="preview-actions">
+      <button id="exportButton" type="button" class="primary-action">Export PNG</button>
+      <button id="randomButton" type="button" class="ghost-action">Surprise me</button>
+    </div>
+    <div class="size-note">
+      <h2>Post sizes included</h2>
+      <ul>
+        <li><strong>Landscape</strong> 1920 × 1080 — feeds and video thumbnails</li>
+        <li><strong>Portrait</strong> 1080 × 1350 — the tall poster crop</li>
+        <li><strong>Square</strong> 1080 × 1080 — the classic grid post</li>
+      </ul>
+    </div>
   </section>
+
+  <aside class="controls-column" aria-label="Cover controls">
+    <fieldset>
+      <legend>1 · Your photos</legend>
+      <label class="upload-box">
+        <span>Choose photos from your device</span>
+        <input id="photoInput" type="file" accept="image/*" multiple>
+      </label>
+      <div id="sampleButtons" class="sample-buttons">
+        <span class="sample-label">Or start with a sample scene:</span>
+        <button type="button" data-sample="samples/hero.jpg" data-label="Sample — Hero">Hero</button>
+        <button type="button" data-sample="samples/boulevard.jpg" data-label="Sample — Boulevard">Boulevard</button>
+        <button type="button" data-sample="samples/pier.jpg" data-label="Sample — Pier">Pier</button>
+      </div>
+      <div id="photoList" class="photo-list"></div>
+      <label>Fill panels
+        <select id="fillModeSelect">
+          <option value="single" selected>One photo across every panel</option>
+          <option value="per-panel">Cycle photos panel by panel</option>
+        </select>
+      </label>
+      <label>Zoom active photo
+        <input id="zoomRange" type="range" min="1" max="2.6" step="0.02" value="1">
+      </label>
+      <label>Focus left ↔ right
+        <input id="focusXRange" type="range" min="0" max="1" step="0.01" value="0.5">
+      </label>
+      <label>Focus top ↔ bottom
+        <input id="focusYRange" type="range" min="0" max="1" step="0.01" value="0.5">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>2 · Layout &amp; grade</legend>
+      <label>Panel layout
+        <select id="layoutSelect"></select>
+      </label>
+      <label>Cover size
+        <select id="sizeSelect"></select>
+      </label>
+      <label>Colour grade
+        <select id="gradeSelect"></select>
+      </label>
+      <p id="gradeBlurb" class="grade-blurb"></p>
+      <label class="check-row">
+        <input id="halftoneToggle" type="checkbox" checked>
+        Halftone print texture
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>3 · Lettering &amp; stickers</legend>
+      <label>Cover title
+        <input id="titleInput" type="text" value="PALM BAY HEAT" maxlength="42">
+      </label>
+      <label>Subtitle
+        <input id="subtitleInput" type="text" value="LEONIDA" maxlength="30">
+      </label>
+      <label class="check-row">
+        <input id="stickerToggle" type="checkbox" checked>
+        Price sticker
+      </label>
+      <label>Sticker price
+        <input id="stickerPriceInput" type="text" value="$69" maxlength="8">
+      </label>
+      <label>Sticker note
+        <input id="stickerNoteInput" type="text" value="OUT NOW" maxlength="14">
+      </label>
+      <label class="check-row">
+        <input id="badgeToggle" type="checkbox" checked>
+        Corner badge
+      </label>
+      <label>Badge text
+        <input id="badgeTextInput" type="text" value="18+ · LEONIDA" maxlength="24">
+      </label>
+    </fieldset>
+
+    <p class="fine-print">Everything runs locally in your browser. Your photos never leave this page. All lettering, stickers and scenes are original to Palm Bay Heat.</p>
+  </aside>
 </main>
 
-<footer class="footer">
-  <p>Palm Bay Heat — Leonida Cover Studio · Runs fully offline · No uploads, no accounts, no tracking · Export: full-resolution PNG</p>
+<footer class="colophon">
+  <p>Palm Bay Heat — Leonida Cover Studio · A fictional cover maker for the make.fun GTA 6 cover art bounty.</p>
 </footer>
 
 <script src="src/panels.js"></script>
